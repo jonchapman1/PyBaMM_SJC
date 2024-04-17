@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Get number of cores on Windows
         id: get_num_cores
@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-12]
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -107,16 +107,16 @@ jobs:
       - uses: actions/setup-python@v5
         name: Set up Python
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
@@ -134,7 +134,7 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_BUILD_MACOS: >
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload wheels for macOS amd64
         uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         with:
           name: macos_amd64_wheels
           path: ./wheelhouse/*.whl
@@ -173,7 +173,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
@@ -218,6 +218,12 @@ jobs:
     name: Upload package to PyPI
     needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybamm
+    permissions:
+      id-token: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -231,8 +237,6 @@ jobs:
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           packages-dir: files/
 
       - name: Publish on TestPyPI
