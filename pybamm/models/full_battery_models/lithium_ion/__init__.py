@@ -24,3 +24,4 @@ from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017
 from .mpm import MPM
 from .msmr import MSMR
+from .spm_workshop import WorkshopSPM
